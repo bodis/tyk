@@ -49,6 +49,7 @@ import (
 
 	"github.com/TykTechnologies/tyk/config"
 
+	"github.com/TykTechnologies/storage/persistent/model"
 	"github.com/TykTechnologies/tyk/internal/otel"
 	"github.com/TykTechnologies/tyk/internal/redis"
 	"github.com/TykTechnologies/tyk/internal/uuid"
@@ -931,6 +932,10 @@ func (gw *Gateway) handleAddOrUpdatePolicy(polID string, r *http.Request) (inter
 	if polID != "" && newPol.ID != polID && r.Method == http.MethodPut {
 		log.Error("PUT operation on different IDs")
 		return apiError("Request ID does not match that in policy! For Update operations these must match."), http.StatusBadRequest
+	}
+
+	if newPol.ID != "" && !model.IsObjectIDHex(newPol.ID) {
+		return apiError("Request ID expected to be a valid MongoId."), http.StatusBadRequest
 	}
 
 	if newPol.ID == "" {
