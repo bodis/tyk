@@ -943,7 +943,7 @@ func (gw *Gateway) handleAddOrUpdatePolicy(polID string, r *http.Request) (inter
 	}
 
 	// Create a filename
-	polFilePath := filepath.Join(gw.GetConfig().Policies.PolicyPath, newPol.ID+".json")
+	polFilePath := filepath.Join(gw.GetConfig().Policies.PolicyPath, cleanID+".json")
 
 	asByte, err := json.MarshalIndent(newPol, "", "  ")
 	if err != nil {
