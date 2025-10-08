@@ -933,6 +933,10 @@ func (gw *Gateway) handleAddOrUpdatePolicy(polID string, r *http.Request) (inter
 		return apiError("Request ID does not match that in policy! For Update operations these must match."), http.StatusBadRequest
 	}
 
+	if newPol.ID == "" {
+		newPol.ID = newPol.MID.Hex()
+	}
+
 	// Create a filename
 	polFilePath := filepath.Join(gw.GetConfig().Policies.PolicyPath, newPol.ID+".json")
 

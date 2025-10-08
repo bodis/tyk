@@ -39,8 +39,7 @@ func TestLoadPoliciesFromDashboardReLogin(t *testing.T) {
 	// Reset the global dashboard client to ensure test isolation
 	g.Gw.resetDashboardClient()
 
-	allowExplicitPolicyID := g.Gw.GetConfig().Policies.AllowExplicitPolicyID
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", allowExplicitPolicyID)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 	assert.Error(t, ErrPoliciesFetchFailed, err)
 	assert.Empty(t, policyMap)
@@ -677,34 +676,29 @@ func TestParsePoliciesFromRPC(t *testing.T) {
 	objectID := persistentmodel.NewObjectID()
 	explicitID := "explicit_pol_id"
 	tcs := []struct {
-		testName      string
-		allowExplicit bool
-		policy        user.Policy
-		expectedID    string
+		testName   string
+		policy     user.Policy
+		expectedID string
 	}{
 		{
-			testName:      "policy with explicit ID - allow_explicit_id false",
-			allowExplicit: false,
-			policy:        user.Policy{MID: objectID, ID: explicitID},
-			expectedID:    objectID.Hex(),
+			testName:   "policy with explicit ID - allow_explicit_id false",
+			policy:     user.Policy{MID: objectID, ID: explicitID},
+			expectedID: objectID.Hex(),
 		},
 		{
-			testName:      "policy with explicit ID - allow_explicit_id true",
-			allowExplicit: true,
-			policy:        user.Policy{MID: objectID, ID: explicitID},
-			expectedID:    explicitID,
+			testName:   "policy with explicit ID - allow_explicit_id true",
+			policy:     user.Policy{MID: objectID, ID: explicitID},
+			expectedID: explicitID,
 		},
 		{
-			testName:      "policy without explicit ID - allow_explicit_id false",
-			allowExplicit: false,
-			policy:        user.Policy{MID: objectID, ID: ""},
-			expectedID:    objectID.Hex(),
+			testName:   "policy without explicit ID - allow_explicit_id false",
+			policy:     user.Policy{MID: objectID, ID: ""},
+			expectedID: objectID.Hex(),
 		},
 		{
-			testName:      "policy without explicit ID - allow_explicit_id true",
-			allowExplicit: true,
-			policy:        user.Policy{MID: objectID, ID: ""},
-			expectedID:    objectID.Hex(),
+			testName:   "policy without explicit ID - allow_explicit_id true",
+			policy:     user.Policy{MID: objectID, ID: ""},
+			expectedID: objectID.Hex(),
 		},
 	}
 
@@ -714,7 +708,7 @@ func TestParsePoliciesFromRPC(t *testing.T) {
 			policyList, err := json.Marshal([]user.Policy{tc.policy})
 			assert.NoError(t, err, "error unmarshalling policies")
 
-			polMap, errParsing := parsePoliciesFromRPC(string(policyList), tc.allowExplicit)
+			polMap, errParsing := parsePoliciesFromRPC(string(policyList))
 			assert.NoError(t, errParsing, "error parsing policies from RPC:", errParsing)
 
 			_, ok := polMap[tc.expectedID]
@@ -789,7 +783,7 @@ func TestLoadPoliciesFromDashboardAutoRecovery(t *testing.T) {
 	}
 
 	// Test: Load policies should auto-recover from nonce failure
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 	// Should succeed due to auto-recovery
 	assert.NoError(t, err, "Auto-recovery should allow successful policy loading")
@@ -856,7 +850,7 @@ func TestLoadPoliciesFromDashboardNonceEmptyAfterFailedRecovery(t *testing.T) {
 	g.Gw.ServiceNonce = "old-nonce"
 
 	// First call - should get "Nonce failed"
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 	assert.Error(t, err)
 	assert.Empty(t, policyMap)
 
@@ -864,7 +858,7 @@ func TestLoadPoliciesFromDashboardNonceEmptyAfterFailedRecovery(t *testing.T) {
 	g.Gw.ServiceNonce = ""
 
 	// Second call - should get "Authorization failed (Nonce empty)"
-	policyMap, err = g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+	policyMap, err = g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 	assert.Error(t, err)
 	assert.Empty(t, policyMap)
 
@@ -890,8 +884,7 @@ func TestLoadPoliciesFromDashboardInvalidSecret(t *testing.T) {
 	g := StartTest(conf)
 	defer g.Close()
 
-	allowExplicitPolicyID := g.Gw.GetConfig().Policies.AllowExplicitPolicyID
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "invalid-secret", allowExplicitPolicyID)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "invalid-secret")
 
 	// Should fail with the standard error, NOT trigger nonce recovery
 	assert.Error(t, err)
@@ -918,8 +911,7 @@ func TestLoadPoliciesFromDashboardServerError(t *testing.T) {
 	g := StartTest(conf)
 	defer g.Close()
 
-	allowExplicitPolicyID := g.Gw.GetConfig().Policies.AllowExplicitPolicyID
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", allowExplicitPolicyID)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 	// Should fail with standard error, NOT trigger nonce recovery
 	assert.Error(t, err)
@@ -997,7 +989,7 @@ func TestLoadPoliciesFromDashboardTimeoutSimulation(t *testing.T) {
 	// Set initial nonce to simulate established session before timeout
 	g.Gw.ServiceNonce = "pre-timeout-nonce"
 
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 	// Should succeed due to auto-recovery
 	assert.NoError(t, err, "Auto-recovery should handle timeout-induced nonce failure")
@@ -1026,8 +1018,7 @@ func TestLoadPoliciesFromDashboardNoDashServiceFallback(t *testing.T) {
 	// DO NOT set up DashService - simulating environment where it's not available
 	g.Gw.DashService = nil
 
-	allowExplicitPolicyID := g.Gw.GetConfig().Policies.AllowExplicitPolicyID
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", allowExplicitPolicyID)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 	// Should fail gracefully without causing panic
 	assert.Error(t, err)
@@ -1099,7 +1090,7 @@ func TestLoadPoliciesFromDashboardNoNodeIDFound(t *testing.T) {
 	}
 
 	// Test: Load policies should auto-recover from missing node ID
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 	// Should succeed due to auto-recovery
 	assert.NoError(t, err, "Auto-recovery should allow successful policy loading after node ID error")
@@ -1197,7 +1188,7 @@ func TestLoadPoliciesFromDashboardNetworkErrors(t *testing.T) {
 			defer g.Close()
 
 			// Test: Load policies should fail with network error
-			policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+			policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 			// Should fail with appropriate error
 			assert.Error(t, err, tc.description)
@@ -1287,7 +1278,7 @@ func TestLoadPoliciesFromDashboardNetworkErrorRecovery(t *testing.T) {
 	}
 
 	// Test: Load policies should auto-recover from network error
-	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+	policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 	// Should succeed due to auto-recovery from network error
 	assert.NoError(t, err, "Auto-recovery should handle network errors")
@@ -1407,7 +1398,7 @@ func TestLoadPoliciesFromDashboardLoadBalancerDrain(t *testing.T) {
 			}
 
 			// Test: Should recover from load balancer drain
-			policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "", false)
+			policyMap, err := g.Gw.LoadPoliciesFromDashboard(ts.URL, "")
 
 			// Should succeed after recovery
 			assert.NoError(t, err, tc.description+" - should recover")
