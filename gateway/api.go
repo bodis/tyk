@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TykTechnologies/storage/persistent/model"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -938,7 +939,8 @@ func (gw *Gateway) handleAddOrUpdatePolicy(polID string, r *http.Request) (inter
 	}
 
 	cleanID := filepath.Base(newPol.ID)
-	if cleanID == "." || cleanID == "/" {
+
+	if !model.IsObjectIDHex(cleanID) {
 		return apiError("Invalid policy ID."), http.StatusBadRequest
 	}
 
