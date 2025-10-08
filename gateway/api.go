@@ -49,7 +49,6 @@ import (
 
 	"github.com/TykTechnologies/tyk/config"
 
-	"github.com/TykTechnologies/storage/persistent/model"
 	"github.com/TykTechnologies/tyk/internal/otel"
 	"github.com/TykTechnologies/tyk/internal/redis"
 	"github.com/TykTechnologies/tyk/internal/uuid"
@@ -934,12 +933,13 @@ func (gw *Gateway) handleAddOrUpdatePolicy(polID string, r *http.Request) (inter
 		return apiError("Request ID does not match that in policy! For Update operations these must match."), http.StatusBadRequest
 	}
 
-	if newPol.ID != "" && !model.IsObjectIDHex(newPol.ID) {
-		return apiError("Request ID expected to be a valid MongoId."), http.StatusBadRequest
-	}
-
 	if newPol.ID == "" {
 		newPol.ID = newPol.MID.Hex()
+	}
+
+	cleanID := filepath.Base(newPol.ID)
+	if cleanID == "." || cleanID == "/" {
+		return apiError("Invalid policy ID."), http.StatusBadRequest
 	}
 
 	// Create a filename
