@@ -3,6 +3,7 @@ package gateway
 import (
 	"encoding/json"
 	"errors"
+	"github.com/TykTechnologies/storage/persistent/model"
 	"github.com/TykTechnologies/tyk/header"
 	"io/ioutil"
 	"net/http"
@@ -182,6 +183,12 @@ func (gw *Gateway) LoadPoliciesFromDashboard(endpoint, secret string) (map[strin
 		"prefix": "policy",
 	}).Info("Processing policy list")
 	for _, p := range list.Message {
+
+		if !ensureId(&p.Policy) {
+			log.WithField("policy", p).Warning("Failed to load policy from Dashboard service")
+			continue
+		}
+
 		if _, ok := policies[p.ID]; ok {
 			log.WithFields(logrus.Fields{
 				"prefix":   "policy",
@@ -206,6 +213,10 @@ func parsePoliciesFromRPC(list string) (map[string]user.Policy, error) {
 	policies := make(map[string]user.Policy, len(dbPolicyList))
 
 	for _, p := range dbPolicyList {
+		if !ensureId(&p) {
+			log.WithField("policy", p).Warning("Failed to load policy from RPC")
+			continue
+		}
 		policies[p.ID] = p
 	}
 
@@ -240,4 +251,20 @@ func (gw *Gateway) LoadPoliciesFromRPC(store RPCDataLoader, orgId string) (map[s
 	}
 
 	return policies, nil
+}
+
+// ensureId ensures ID field exists
+// should be removed after migrate
+func ensureId(policy *user.Policy) bool {
+	if policy.ID != "" && model.IsObjectIDHex(policy.ID) {
+		return true
+	}
+
+	if !policy.MID.Valid() {
+		return false
+	}
+
+	policy.ID = policy.MID.Hex()
+
+	return true
 }

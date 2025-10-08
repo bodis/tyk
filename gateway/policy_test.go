@@ -672,33 +672,27 @@ func TestPerAPIPolicyUpdate(t *testing.T) {
 }
 
 func TestParsePoliciesFromRPC(t *testing.T) {
-
 	objectID := persistentmodel.NewObjectID()
-	explicitID := "explicit_pol_id"
+
 	tcs := []struct {
-		testName   string
-		policy     user.Policy
-		expectedID string
+		testName    string
+		policy      user.Policy
+		expectedIDs []string
 	}{
 		{
-			testName:   "policy with explicit ID - allow_explicit_id false",
-			policy:     user.Policy{MID: objectID, ID: explicitID},
-			expectedID: objectID.Hex(),
+			testName:    "policy with explicit ID",
+			policy:      user.Policy{MID: objectID, ID: objectID.Hex()},
+			expectedIDs: []string{objectID.Hex()},
 		},
 		{
-			testName:   "policy with explicit ID - allow_explicit_id true",
-			policy:     user.Policy{MID: objectID, ID: explicitID},
-			expectedID: explicitID,
+			testName:    "policy with implicit ID",
+			policy:      user.Policy{MID: objectID, ID: ""},
+			expectedIDs: []string{objectID.Hex()},
 		},
 		{
-			testName:   "policy without explicit ID - allow_explicit_id false",
-			policy:     user.Policy{MID: objectID, ID: ""},
-			expectedID: objectID.Hex(),
-		},
-		{
-			testName:   "policy without explicit ID - allow_explicit_id true",
-			policy:     user.Policy{MID: objectID, ID: ""},
-			expectedID: objectID.Hex(),
+			testName:    "policy with invalid ID",
+			policy:      user.Policy{MID: objectID, ID: "zxc"},
+			expectedIDs: []string{objectID.Hex()},
 		},
 	}
 
@@ -711,8 +705,10 @@ func TestParsePoliciesFromRPC(t *testing.T) {
 			polMap, errParsing := parsePoliciesFromRPC(string(policyList))
 			assert.NoError(t, errParsing, "error parsing policies from RPC:", errParsing)
 
-			_, ok := polMap[tc.expectedID]
-			assert.True(t, ok, "expected policy id", tc.expectedID, " not found after parsing policies")
+			assert.Equal(t, len(tc.expectedIDs), len(polMap))
+			for _, id := range tc.expectedIDs {
+				assert.Contains(t, polMap, id, "expected policy id", id, " not found after parsing policies")
+			}
 		})
 	}
 
